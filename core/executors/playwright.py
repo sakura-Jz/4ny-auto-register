@@ -1,4 +1,6 @@
 """Playwright 执行器 - 支持 headless/headed 模式"""
+import os
+
 from ..base_executor import BaseExecutor, Response
 
 
@@ -22,6 +24,9 @@ class PlaywrightExecutor(BaseExecutor):
                 "--no-sandbox",
             ]
         }
+        executable_path = os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH", "").strip()
+        if executable_path:
+            launch_opts["executable_path"] = executable_path
         if self.proxy:
             launch_opts["proxy"] = {"server": self.proxy}
         self._browser = self._pw.chromium.launch(**launch_opts)

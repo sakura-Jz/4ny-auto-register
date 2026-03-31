@@ -1,5 +1,5 @@
 # Stage 1: 构建前端
-FROM node:20-slim AS frontend-builder
+FROM node:20-bookworm-slim AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
@@ -7,20 +7,33 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Python 后端 + 运行环境
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 # 系统依赖：Chromium、Xvfb、x11vnc、noVNC
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    # 浏览器运行依赖
-    chromium chromium-driver \
-    # 虚拟显示 + VNC
-    xvfb x11vnc \
-    # noVNC 依赖
-    novnc websockify \
-    # 其他
-    curl ca-certificates fonts-liberation libnss3 libatk-bridge2.0-0 \
-    libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxkbcommon0 \
-    libasound2 libpango-1.0-0 libcairo2 libgtk-3-0 \
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        chromium \
+        chromium-driver \
+        xvfb \
+        x11vnc \
+        novnc \
+        websockify \
+        curl \
+        ca-certificates \
+        fonts-liberation \
+        libnss3 \
+        libatk-bridge2.0-0 \
+        libdrm2 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxrandr2 \
+        libgbm1 \
+        libxkbcommon0 \
+        libasound2 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libgtk-3-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -29,9 +42,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 安装 Playwright 浏览器
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN playwright install chromium --with-deps || true
+ENV PLAYWRIGHT_EXECUTABLE_PATH=/usr/bin/chromium
 
 # 复制后端代码
 COPY . .
@@ -43,7 +54,8 @@ COPY --from=frontend-builder /app/static ./static
 
 # 启动脚本
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh \
+    && chmod +x /docker-entrypoint.sh
 
 EXPOSE 8000 6080
 

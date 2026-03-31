@@ -1,4 +1,5 @@
 """共享的 OAuth 浏览器辅助（支持普通 Playwright / Chrome Profile / CDP）。"""
+import os
 import time
 from typing import Callable, Iterable, Optional
 from urllib.parse import urlparse
@@ -127,6 +128,10 @@ def _build_proxy_config(proxy: Optional[str]) -> Optional[dict]:
     return config
 
 
+def _playwright_executable_path() -> str:
+    return (os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH", "") or "").strip()
+
+
 _GOOGLE_ACCOUNT_SELECTORS = [
     "[data-email]",
     ".JDAKTe",
@@ -205,6 +210,9 @@ class OAuthBrowser:
                 # Fallback: plain Playwright Chromium
                 self.log("[OAuthBrowser] 未找到系统 Chrome，使用 Playwright Chromium")
                 launch_kwargs = {"headless": self.headless}
+                executable_path = _playwright_executable_path()
+                if executable_path:
+                    launch_kwargs["executable_path"] = executable_path
                 if proxy_cfg:
                     launch_kwargs["proxy"] = proxy_cfg
                 self.browser = self._pw.chromium.launch(**launch_kwargs)
